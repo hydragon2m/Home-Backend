@@ -12,6 +12,18 @@ export class User {
   @Column()
   password: string;
 
+  @Column()
+  name: string;
+
+  @Column({ nullable: true })
+  avatar: string;
+
+  @Column({ name: 'phone_number', nullable: true })
+  phoneNumber: string;
+
+  @Column({ type: 'text', nullable: true })
+  bio: string;
+
   @OneToMany(() => UserOrganization, (userOrg) => userOrg.user)
   userOrganizations: UserOrganization[];
 

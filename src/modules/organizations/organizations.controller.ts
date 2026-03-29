@@ -6,13 +6,13 @@ import {
   Param,
   Get,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { GetUser } from '../auth/decorators/get-user.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { GetUser } from '../../common/decorators/get-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { InvitationsService } from './invitations.service';
 import { OrgRole } from './entities/user-organization.entity';
-import { PoliciesGuard } from '../casl/guards/policies.guard';
-import { CheckPolicies } from '../casl/decorators/check-policies.decorator';
+import { PoliciesGuard } from '../../common/guards/policies.guard';
+import { CheckPolicies } from '../../common/decorators/check-policies.decorator';
 import { Action } from '../casl/casl-ability.factory';
 
 @Controller('organizations')

@@ -2,20 +2,21 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { Invitation } from './entities/invitation.entity';
-import { UserOrganization, OrgRole } from './entities/user-organization.entity';
+import { OrgRole } from './entities/user-organization.entity';
+import { INVITATIONS_REPOSITORY, IInvitationsRepository } from './interfaces/invitations.repository.interface';
+import { ORGANIZATIONS_REPOSITORY, IOrganizationsRepository } from './interfaces/organizations.repository.interface';
 import * as crypto from 'crypto';
 
 @Injectable()
 export class InvitationsService {
   constructor(
-    @InjectRepository(Invitation)
-    private readonly invitationRepository: Repository<Invitation>,
-    @InjectRepository(UserOrganization)
-    private readonly userOrgRepository: Repository<UserOrganization>,
+    @Inject(INVITATIONS_REPOSITORY)
+    private readonly invitationRepository: IInvitationsRepository,
+    @Inject(ORGANIZATIONS_REPOSITORY)
+    private readonly orgRepository: IOrganizationsRepository,
   ) {}
 
   async createInvite(
@@ -28,22 +29,19 @@ export class InvitationsService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
-    const invitation = this.invitationRepository.create({
+    const invitation = {
       code,
       organizationId,
       invitedById,
       role,
       expiresAt,
-    });
+    };
 
     return this.invitationRepository.save(invitation);
   }
 
   async acceptInvite(userId: string, code: string) {
-    const invitation = await this.invitationRepository.findOne({
-      where: { code, isActive: true },
-      relations: ['organization'],
-    });
+    const invitation = await this.invitationRepository.findByCode(code);
 
     if (!invitation) {
       throw new NotFoundException('Mã mời không tồn tại hoặc đã bị vô hiệu hóa.');
@@ -58,25 +56,18 @@ export class InvitationsService {
     }
 
     // Kiểm tra xem user đã trong tổ chức chưa
-    const existingMember = await this.userOrgRepository.findOne({
-      where: { 
-        user: { id: userId } as any, 
-        organization: { id: invitation.organizationId } as any 
-      },
-    });
+    const existingMember = await this.orgRepository.findUserOrganization(userId, invitation.organizationId);
 
     if (existingMember) {
       throw new BadRequestException('Bạn đã là thành viên của tổ chức này.');
     }
 
     // Thêm user vào tổ chức
-    const userOrg = this.userOrgRepository.create({
+    await this.orgRepository.saveUserOrganization({
       user: { id: userId } as any,
       organization: { id: invitation.organizationId } as any,
       role: invitation.role,
     });
-
-    await this.userOrgRepository.save(userOrg);
 
     // Cập nhật số lần sử dụng
     invitation.usesCount += 1;

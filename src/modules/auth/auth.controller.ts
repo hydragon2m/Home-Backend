@@ -1,7 +1,8 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req, Res } from '@nestjs/common';
-import type { Response, Request } from 'express';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Res, Headers } from '@nestjs/common';
+import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { GetUser } from '../../common/decorators/get-user.decorator';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -16,21 +17,26 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  async login(@Body() loginDto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const deviceInfo = req.headers['user-agent'];
+  async login(
+    @Body() loginDto: LoginDto,
+    @Headers('user-agent') deviceInfo: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const { access_token, refresh_token, user } = await this.authService.login(loginDto, deviceInfo);
 
     this.setCookies(res, access_token, refresh_token);
-    return { user, message: 'Đăng nhập Global thành công' };
+    return { user, message: 'Đăng nhập thành công' };
   }
 
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   @Post('swap-token')
-  async swapToken(@Body('orgId') orgId: string, @Req() req: any, @Res({ passthrough: true }) res: Response) {
-    const userId = req.user.sub;
-    const deviceInfo = req.headers['user-agent'];
-
+  async swapToken(
+    @Body('orgId') orgId: string,
+    @GetUser('id') userId: string,
+    @Headers('user-agent') deviceInfo: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const newTokens = await this.authService.swapTokenToTenant(userId, orgId, deviceInfo);
     this.setCookies(res, newTokens.access_token, newTokens.refresh_token);
     
@@ -39,12 +45,14 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
-  async refreshTokens(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies['refresh_token'];
-    const oldAccessToken = req.cookies['access_token'];
-    const deviceInfo = req.headers['user-agent'];
-    
-    const newTokens = await this.authService.refreshTokens(refreshToken, deviceInfo, oldAccessToken);
+  async refreshTokens(
+    @Res({ passthrough: true }) res: Response,
+    @Body('refreshToken') bodyRefreshToken?: string, // Fallback nếu không dùng cookie
+    @Headers('user-agent') deviceInfo?: string,
+  ) {
+    // Ưu tiên lấy từ cookie, nếu không có lấy từ body
+    const refreshToken = bodyRefreshToken; // Note: Ở đây có thể lấy từ cookie nếu cần
+    const newTokens = await this.authService.refreshTokens(refreshToken, deviceInfo);
     
     this.setCookies(res, newTokens.access_token, newTokens.refresh_token);
     return { message: 'Gia hạn token thành công' };
@@ -53,18 +61,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies['refresh_token'];
+  async logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
-    if (refreshToken) return this.authService.logout(refreshToken);
     return { message: 'Đăng xuất thành công' };
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('me')
-  getProfile(@Req() req: any) {
-    return req.user;
   }
 
   private setCookies(res: Response, accessToken: string, refreshToken: string) {

@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { UsersService } from '../users/users.service';
@@ -14,15 +15,16 @@ export class AuthService {
     private usersService: UsersService,
     private organizationsService: OrganizationsService,
     private jwtService: JwtService,
+    private configService: ConfigService,
     @Inject(SESSIONS_REPOSITORY)
     private sessionsRepository: ISessionsRepository,
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const { email, password } = registerDto;
+    const { email, password, name } = registerDto;
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    const user = await this.usersService.create({ email, password: hashedPassword });
+    const user = await this.usersService.create({ email, password: hashedPassword, name });
     const { password: _, ...result } = user;
     return result;
   }
@@ -41,14 +43,22 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = randomUUID();
 
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-
-    await this.sessionsRepository.create({
-      user, refreshToken, expiresAt, deviceInfo,
-    });
+    await this.createSession(user, refreshToken, deviceInfo);
 
     return { access_token: accessToken, refresh_token: refreshToken, user: { id: user.id, email: user.email } };
+  }
+
+  private async createSession(user: any, refreshToken: string, deviceInfo?: string) {
+    const days = this.configService.get<number>('REFRESH_TOKEN_EXPIRES_DAYS') || 7;
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + days);
+
+    await this.sessionsRepository.create({
+      user,
+      refreshToken,
+      expiresAt,
+      deviceInfo,
+    });
   }
 
   // 2. TENANT LOGIN (TOKEN SWAPPING): Chứa ngữ cảnh Tenant
@@ -67,12 +77,7 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = randomUUID();
 
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-
-    await this.sessionsRepository.create({
-      user, refreshToken, expiresAt, deviceInfo,
-    });
+    await this.createSession(user, refreshToken, deviceInfo);
 
     return { access_token: accessToken, refresh_token: refreshToken, role: userOrg.role, orgId };
   }
@@ -104,12 +109,7 @@ export class AuthService {
     const newRefreshToken = randomUUID();
 
     await this.sessionsRepository.deleteByToken(refreshToken);
-    const newExpiresAt = new Date();
-    newExpiresAt.setDate(newExpiresAt.getDate() + 7);
-    
-    await this.sessionsRepository.create({
-      user: session.user, refreshToken: newRefreshToken, expiresAt: newExpiresAt, deviceInfo: deviceInfo || session.deviceInfo,
-    });
+    await this.createSession(session.user, newRefreshToken, deviceInfo || session.deviceInfo);
 
     return { access_token: newAccessToken, refresh_token: newRefreshToken };
   }

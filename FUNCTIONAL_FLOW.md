@@ -1,66 +1,91 @@
-# Home-Server Functional & Technical Flow
+# 📚 Home-Server API & Documentation for Frontend
 
-Tài liệu mô tả kiến trúc kỹ thuật và các luồng chức năng của hệ thống Home-Server (Multi-tenant, Roles & Invitations).
-
----
-
-## 1. Kiến trúc Kỹ thuật (Technical Stack)
-- **Backend**: NestJS (v11) - framework bền vững, chuẩn hóa cao.
-- **ORM**: TypeORM - quản lý Database bằng Entity và Migration.
-- **Database**: PostgreSQL - lưu trữ dữ liệu quan hệ, hỗ trợ mạnh cho JSONB sau này.
-- **Authentication**: JWT (JSON Web Token) kết hợp với **HttpOnly Cookie** (ngăn chặn XSS).
-- **Authorization**: **CASL** (Attribute-Based Access Control) giúp quản lý quyền linh hoạt mức thuộc tính.
+Tài liệu này cung cấp chi tiết về các Endpoint, luồng xác thực và cách tích hợp cho đội ngũ Frontend.
 
 ---
 
-## 2. Luồng Bảo mật & Đăng nhập (Security Flow)
+## 1. Cơ chế Xác thực (Authentication)
 
-### Authentication (Xác thực)
-1. Người dùng gửi `email/password` lên `/auth/login`.
-2. Server xác thực và sinh ra **JWT Token**.
-3. Token được lưu vào **HttpOnly Cookie** (tên: `access_token`). 
-   - *Lưu ý*: Frontend tự động gửi Cookie này trong mỗi request mà không cần code JS can thiệp (an toàn tuyệt đối).
+Hệ thống sử dụng **JWT kết hợp HttpOnly Cookie**. 
+- **Lợi ích**: Bảo mật tuyệt đối trước tấn công XSS (JS không thể đọc Token).
+- **Yêu cầu quan trọng**: Frontend (Axios/Fetch) phải bật cấu hình `withCredentials: true` để trình duyệt tự động gửi/nhận Cookie.
 
-### Authorization (Phân quyền)
-- **JwtAuthGuard**: Kiểm tra xem Cookie có Token hợp lệ không.
-- **PoliciesGuard**: Kiểm tra xem Người dùng có quyền truy cập vào Tổ chức (`orgId`) cụ thể hay không.
-- **CASL Factory**: Định nghĩa luật chơi dựa trên vai trò:
-    - `ORG_ADMIN`: Quyền `manage` (Toàn quyền).
-    - `ORG_MEMBER`: Quyền `read` (Chỉ xem).
+### 🔄 Luồng Đăng nhập & Đổi tổ chức (Tenant Swapping)
 
----
+```mermaid
+sequenceDiagram
+    participant FE as Frontend (React/App)
+    participant BE as Backend (NestJS)
+    participant DB as Database (Postgres)
 
-## 3. Quản lý Tổ chức & Mã mời (Invitations)
-
-### Cơ chế Multi-tenancy
-- Hệ thống chia dữ liệu theo **Organization**. 
-- Mỗi bản ghi liên quan (Thiết bị, Thành viên...) đều bắt buộc có cột `organization_id`.
-- **Tenant Swapping**: Người dùng có thể có nhiều tổ chức, khi chuyển đổi, `currentOrgId` trong Token/Cookie sẽ thay đổi giúp Server lọc dữ liệu chuẩn xác.
-
-### Luồng Mã mời (Family Link)
-1. **Admin** gọi API sinh mã (8 ký tự ngẫu nhiên).
-2. Mã được lưu kèm: `organizationId`, `role` (Admin/Member), `expiresAt` (Hạn dùng) và `maxUses` (Lượt dùng).
-3. **Thành viên mới** gia nhập qua `POST /organizations/join/:code`. 
-4. Hệ thống tự động tạo liên kết trong bảng `user_organizations` mà không cần Admin phải add tay.
+    FE->>BE: POST /auth/login { email, password }
+    BE->>DB: Kiểm tra User
+    BE-->>FE: HTTP 200 + Set-Cookie: access_token (Global Scope)
+    
+    Note over FE, BE: Hiện tại User đã LOGIN nhưng chưa chọn Tổ chức.
+    
+    FE->>BE: POST /auth/swap-token { orgId }
+    BE->>DB: Kiểm tra Quyền trong Org
+BE-->>FE: HTTP 200 + Set-Cookie: access_token (Org Context)
+    
+    Note over FE, BE: Từ giờ mọi request sẽ mang theo orgId & role trong Token.
+```
 
 ---
 
-## 4. Quản lý Database (Migration)
-Hệ thống **không dùng `synchronize: true`** ở môi trường Production (EC2) để tránh rủi ro mất dữ liệu. 
+## 2. Danh sách Endpoint Chi tiết
 
-**Quy trình chuẩn:**
-1. Thay đổi code Entity.
-2. `pnpm migration:generate`: Tự động so sánh Code và DB để sinh file `.ts` chứa SQL.
-3. `pnpm migration:run`: Thực thi thay đổi vào DB.
+### 🔐 Module: Authentication (`/auth`)
 
----
-
-## 5. Danh sách API Quan trọng
-
-| Chức năng | Method | Endpoint | Lưu ý |
+| Endpoint | Method | Body | Mô tả |
 | :--- | :--- | :--- | :--- |
-| Đăng ký | POST | `/auth/register` | Tự tạo Org mặc định |
-| Đăng nhập | POST | `/auth/login` | Trả về Set-Cookie |
-| Tạo mã mời | POST | `/organizations/:orgId/invites` | Chỉ Admin mới tạo được |
-| Tham gia | POST | `/organizations/join/:code` | Tự động gán Role |
-| Check Health | GET | `/health` | Check uptime cho AWS ALB |
+| `/auth/register` | POST | `{ email, password, name }` | Đăng ký tài khoản mới. Trả về thông tin User. |
+| `/auth/login` | POST | `{ email, password }` | Đăng nhập Global. Trả về Cookie `access_token`. |
+| `/auth/swap-token` | POST | `{ orgId }` | Đổi sang ngữ cảnh Tổ chức cụ thể. Trả về Token chứa `orgId` và `role`. |
+| `/auth/refresh` | POST | `{}` | Gia hạn Token khi hết hạn. |
+| `/auth/logout` | POST | `{}` | Xóa trắng Cookie. |
+
+### 👤 Module: Users (`/users`)
+
+| Endpoint | Method | Body | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `/users/me` | GET | `{}` | Lấy thông tin cá nhân của User hiện tại (kèm ẩn trường nhạy cảm). |
+| `/users/me` | PATCH | `{ name?, avatar?, phoneNumber?, bio? }` | Cập nhật thông tin hồ sơ của User. |
+| `/users/:id` | GET | `{}` | Xem hồ sơ công khai của User khác (chỉ trả về `id`, `name`, `avatar`, `bio`, `createdAt`). |
+
+### 🏢 Module: Organizations (`/organizations`)
+
+| Endpoint | Method | Body | Quyền | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `/:orgId/invites` | POST | `{ role, expiresInDays }` | Admin/Owner | Tạo mã mời (8 ký tự). |
+| `/join/:code` | POST | `{}` | Mọi User | Gia nhập tổ chức qua mã mời. |
+
+---
+
+## 3. Quản lý Quyền (Roles & Policies)
+
+Backend sử dụng **CASL**. Dữ liệu `role` nằm trong `access_token`. FE có thể dùng trường này để hiển thị giao diện phù hợp:
+
+- **ORG_ADMIN**: Có toàn quyền quản lý (`Action.Manage`).
+- **ORG_MEMBER**: Chỉ có quyền xem (`Action.Read`).
+
+---
+
+## 4. Xử lý Lỗi (Error Handling)
+
+Hệ thống trả về mã lỗi HTTP chuẩn:
+- `401 Unauthorized`: Token hết hạn hoặc sai thông tin đăng nhập. (FE nên redirect về trang Login).
+- `403 Forbidden`: User không có quyền thực hiện hành động này.
+- `400 Bad Request`: Validation lỗi (Thiếu trường, sai định dạng).
+- `404 Not Found`: Tài nguyên không tồn tại.
+
+---
+
+## 🚀 Hướng dẫn Test API (cURL)
+
+**Đăng nhập mẫu:**
+```bash
+curl -X POST http://localhost:3000/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email": "user@example.com", "password": "password123"}'
+```

@@ -1,5 +1,5 @@
 import { plainToInstance } from 'class-transformer';
-import { IsEnum, IsNumber, IsString, validateSync } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, validateSync } from 'class-validator';
 
 enum Environment {
   Development = 'development',
@@ -15,7 +15,19 @@ class EnvironmentVariables {
   PORT: number;
 
   @IsString()
-  DATABASE_URL: string;
+  DATABASE_HOST: string;
+
+  @IsNumber()
+  DATABASE_PORT: number;
+
+  @IsString()
+  DATABASE_USER: string;
+
+  @IsString()
+  DATABASE_PASSWORD: string;
+
+  @IsString()
+  DATABASE_NAME: string;
 
   @IsString()
   JWT_SECRET: string;
@@ -28,6 +40,10 @@ class EnvironmentVariables {
 
   @IsString()
   REFRESH_TOKEN_EXPIRES_IN: string;
+
+  @IsString()
+  @IsOptional()
+  ALLOWED_ORIGINS?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

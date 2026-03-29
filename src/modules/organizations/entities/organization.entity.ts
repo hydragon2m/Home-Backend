@@ -1,18 +1,15 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
-import { UserOrganization } from '../../organizations/entities/user-organization.entity';
+import { UserOrganization } from './user-organization.entity';
 
-@Entity('users')
-export class User {
+@Entity('organizations')
+export class Organization {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
-  email: string;
-
   @Column()
-  password: string;
+  name: string;
 
-  @OneToMany(() => UserOrganization, (userOrg) => userOrg.user)
+  @OneToMany(() => UserOrganization, (userOrg: UserOrganization) => userOrg.organization)
   userOrganizations: UserOrganization[];
 
   @CreateDateColumn({ name: 'created_at' })

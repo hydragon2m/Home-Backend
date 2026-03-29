@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Session } from './entities/session.entity';
@@ -14,6 +15,7 @@ import { SESSIONS_REPOSITORY } from './interfaces/sessions.repository.interface'
 @Module({
   imports: [
     UsersModule,
+    OrganizationsModule,
     PassportModule,
     TypeOrmModule.forFeature([Session]),
     JwtModule.registerAsync({

@@ -94,5 +94,10 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "pnpm": {
+    "overrides": {
+      "lru-cache": "^10.2.0"
+    }
   }
 }

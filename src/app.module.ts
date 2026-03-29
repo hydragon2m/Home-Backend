@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './modules/users/users.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CaslModule } from './modules/casl/casl.module';
 import { EventsModule } from './modules/events/events.module';
@@ -28,6 +29,7 @@ import { EventsModule } from './modules/events/events.module';
       inject: [ConfigService],
     }),
     UsersModule,
+    OrganizationsModule,
     AuthModule,
     CaslModule,
     EventsModule,

@@ -21,16 +21,30 @@ export class AuthController {
     const { access_token, refresh_token, user } = await this.authService.login(loginDto, deviceInfo);
 
     this.setCookies(res, access_token, refresh_token);
-    return { user, message: 'Đăng nhập thành công' };
+    return { user, message: 'Đăng nhập Global thành công' };
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @Post('swap-token')
+  async swapToken(@Body('orgId') orgId: string, @Req() req: any, @Res({ passthrough: true }) res: Response) {
+    const userId = req.user.sub;
+    const deviceInfo = req.headers['user-agent'];
+
+    const newTokens = await this.authService.swapTokenToTenant(userId, orgId, deviceInfo);
+    this.setCookies(res, newTokens.access_token, newTokens.refresh_token);
+    
+    return { role: newTokens.role, orgId: newTokens.orgId, message: 'Đăng nhập vào Tổ chức thành công' };
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
   async refreshTokens(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies['refresh_token'];
+    const oldAccessToken = req.cookies['access_token'];
     const deviceInfo = req.headers['user-agent'];
     
-    const newTokens = await this.authService.refreshTokens(refreshToken, deviceInfo);
+    const newTokens = await this.authService.refreshTokens(refreshToken, deviceInfo, oldAccessToken);
     
     this.setCookies(res, newTokens.access_token, newTokens.refresh_token);
     return { message: 'Gia hạn token thành công' };
@@ -41,19 +55,15 @@ export class AuthController {
   @Post('logout')
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies['refresh_token'];
-    
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
-    
-    if (refreshToken) {
-      return this.authService.logout(refreshToken);
-    }
+    if (refreshToken) return this.authService.logout(refreshToken);
     return { message: 'Đăng xuất thành công' };
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  getProfile(@Req() req: Request) {
+  getProfile(@Req() req: any) {
     return req.user;
   }
 

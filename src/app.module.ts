@@ -8,11 +8,16 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { AuthModule } from './modules/auth/auth.module';
 import { CaslModule } from './modules/casl/casl.module';
 import { EventsModule } from './modules/events/events.module';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { TerminusModule } from '@nestjs/terminus';
+import { HealthController } from './modules/health/health.controller';
+import { validate } from './config/env.validation';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -33,8 +38,13 @@ import { EventsModule } from './modules/events/events.module';
     AuthModule,
     CaslModule,
     EventsModule,
+    TerminusModule,
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100, // 100 requests per minute per IP
+    }]),
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService],
 })
 export class AppModule {}

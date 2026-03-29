@@ -29,7 +29,7 @@ import { validate } from './config/env.validation';
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
         autoLoadEntities: true,
-        synchronize: true, // Tự động tạo bảng dựa trên code TypeORM (chỉ dùng cho Dev)
+        synchronize: false, // Production phải để false, dùng Migration để quản lý schema
       }),
       inject: [ConfigService],
     }),

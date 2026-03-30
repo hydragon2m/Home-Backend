@@ -16,6 +16,10 @@ export class SessionsRepository implements ISessionsRepository {
     return this.repository.save(session);
   }
 
+  async findById(id: string): Promise<Session | null> {
+    return this.repository.findOne({ where: { id }, relations: ['user'] });
+  }
+
   async findByToken(token: string): Promise<Session | null> {
     return this.repository.findOne({ where: { refreshToken: token }, relations: ['user'] });
   }

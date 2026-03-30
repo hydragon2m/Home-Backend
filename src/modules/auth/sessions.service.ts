@@ -16,12 +16,16 @@ export class SessionsService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + days);
 
-    await this.sessionsRepository.create({
+    return this.sessionsRepository.create({
       user,
       refreshToken,
       expiresAt,
       deviceInfo,
     });
+  }
+
+  async findSessionById(id: string) {
+    return this.sessionsRepository.findById(id);
   }
 
   async validateSession(refreshToken: string) {

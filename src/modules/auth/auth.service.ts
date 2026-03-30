@@ -36,11 +36,10 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) throw new UnauthorizedException('Sai email hoặc mật khẩu');
 
-    const payload = { email: user.email, sub: user.id };
-    const accessToken = this.tokenService.generateAccessToken(payload);
     const refreshToken = this.tokenService.generateRefreshToken();
-
-    await this.sessionsService.createSession(user, refreshToken, deviceInfo);
+    const session = await this.sessionsService.createSession(user, refreshToken, deviceInfo);
+    const payload = { email: user.email, sub: user.id, sid: session.id };
+    const accessToken = this.tokenService.generateAccessToken(payload);
 
     return {
       accessToken,
@@ -55,17 +54,18 @@ export class AuthService {
     const user = await this.usersService.findById(userId);
     if (!user) throw new UnauthorizedException('Người dùng không tồn tại');
 
+    const refreshToken = this.tokenService.generateRefreshToken();
+    const session = await this.sessionsService.createSession(user, refreshToken, deviceInfo);
+
     const payload = { 
       email: user.email, 
       sub: user.id, 
       orgId: orgId, 
-      role: userOrg.role 
+      role: userOrg.role,
+      sid: session.id
     };
 
     const accessToken = this.tokenService.generateAccessToken(payload);
-    const refreshToken = this.tokenService.generateRefreshToken();
-
-    await this.sessionsService.createSession(user, refreshToken, deviceInfo);
 
     return {
       accessToken,
@@ -92,12 +92,13 @@ export class AuthService {
       }
     }
 
-    const payload = { email: session.user.email, sub: session.user.id, orgId, role };
-    const newAccessToken = this.tokenService.generateAccessToken(payload);
     const newRefreshToken = this.tokenService.generateRefreshToken();
 
     await this.sessionsService.deleteSession(refreshToken);
-    await this.sessionsService.createSession(session.user, newRefreshToken, deviceInfo || session.deviceInfo);
+    const newSession = await this.sessionsService.createSession(session.user, newRefreshToken, deviceInfo || session.deviceInfo);
+
+    const payload = { email: session.user.email, sub: session.user.id, orgId, role, sid: newSession.id };
+    const newAccessToken = this.tokenService.generateAccessToken(payload);
 
     return {
       accessToken: newAccessToken,

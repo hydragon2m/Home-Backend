@@ -74,28 +74,34 @@ export class AuthController {
       await this.authService.logout(refreshToken);
     }
     
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token', { path: '/auth/refresh' });
+    const baseOptions = this.getCookieOptions();
+    res.clearCookie('access_token', baseOptions);
+    res.clearCookie('refresh_token', { ...baseOptions, path: '/auth/refresh' });
     
     return ServiceResult.success(null, 'Đăng xuất thành công');
   }
 
   private setCookies(res: Response, accessToken: string, refreshToken: string) {
-    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    const baseOptions = this.getCookieOptions();
     
     res.cookie('access_token', accessToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
+      ...baseOptions,
       maxAge: 15 * 60 * 1000, // 15 mins
     });
 
     res.cookie('refresh_token', refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
+      ...baseOptions,
       path: '/auth/refresh', 
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
+  }
+
+  private getCookieOptions() {
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    return {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax' as const,
+    };
   }
 }

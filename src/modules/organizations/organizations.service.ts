@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { Organization } from './entities/organization.entity';
-import { UserOrganization } from './entities/user-organization.entity';
+import { UserOrganization, OrgRole } from './entities/user-organization.entity';
 import { ORGANIZATIONS_REPOSITORY, IOrganizationsRepository } from './interfaces/organizations.repository.interface';
 import { ServiceResult } from '../../common/utils/service-result';
 
@@ -22,5 +22,18 @@ export class OrganizationsService {
       throw new NotFoundException('Người dùng không thuộc Tổ chức này hoặc Tổ chức không tồn tại');
     }
     return userOrg;
+  }
+  
+  async create(userId: string, name: string) {
+    const org = await this.orgRepository.save({ name });
+    
+    // Auto-link creator as ORG_ADMIN
+    await this.orgRepository.saveUserOrganization({
+      user: { id: userId } as any,
+      organization: { id: org.id } as any,
+      role: OrgRole.ORG_ADMIN,
+    });
+    
+    return ServiceResult.success(org, 'Tạo Tổ chức thành công');
   }
 }

@@ -29,6 +29,11 @@ export class OrganizationsController {
     return this.organizationsService.getUserOrganizations(userId);
   }
 
+  @Post()
+  async create(@GetUser('id') userId: string, @Body('name') name: string) {
+    return this.organizationsService.create(userId, name);
+  }
+
   @Post(':orgId/invites')
   @UseGuards(PoliciesGuard)
   @CheckPolicies((ability) => ability.can(Action.Manage, 'all'))
@@ -37,9 +42,9 @@ export class OrganizationsController {
     @GetUser() user: User,
     @Body('role') role: OrgRole,
     @Body('expiresInDays') expiresInDays: number,
+    @Body('maxUses') maxUses: number,
   ) {
-    // Note: Ở đây nên có check Policy xem user có quyền invite không (e.g. Admin/Owner)
-    return this.invitationsService.createInvite(orgId, user.id, role, expiresInDays);
+    return this.invitationsService.createInvite(orgId, user.id, role, expiresInDays, maxUses);
   }
 
   @Post('join/:code')

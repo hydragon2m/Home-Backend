@@ -25,6 +25,7 @@ export class InvitationsService {
     invitedById: string,
     role: OrgRole = OrgRole.ORG_MEMBER,
     expiresInDays: number = 7,
+    maxUses: number = 5,
   ) {
     const code = crypto.randomBytes(4).toString('hex').toUpperCase();
     const expiresAt = new Date();
@@ -36,6 +37,7 @@ export class InvitationsService {
       invitedById,
       role,
       expiresAt,
+      maxUses,
     };
 
     const savedInvite = await this.invitationRepository.save(invitationDraft);

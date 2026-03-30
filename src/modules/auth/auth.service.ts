@@ -79,6 +79,11 @@ export class AuthService {
     return ServiceResult.success(null, 'Đăng xuất thành công');
   }
 
+  async logoutBySessionId(sessionId: string) {
+    await this.sessionsService.deleteSessionById(sessionId);
+    return ServiceResult.success(null, 'Đăng xuất thành công');
+  }
+
   async refreshTokens(refreshToken: string, deviceInfo?: string, oldAccessToken?: string) {
     const session = await this.sessionsService.validateSession(refreshToken);
 

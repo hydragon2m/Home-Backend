@@ -42,6 +42,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     // Trả về user details để gắn vào req.user
-    return { id: user.id, email: user.email };
+    return { id: user.id, email: user.email, sid: payload.sid };
   }
 }

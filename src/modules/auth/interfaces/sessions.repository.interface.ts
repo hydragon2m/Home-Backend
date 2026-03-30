@@ -5,6 +5,7 @@ export interface ISessionsRepository {
   findById(id: string): Promise<Session | null>;
   findByToken(token: string): Promise<Session | null>;
   deleteByToken(token: string): Promise<void>;
+  deleteById(id: string): Promise<void>;
   deleteAllForUser(userId: string): Promise<void>;
 }
 

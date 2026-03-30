@@ -41,6 +41,10 @@ export class SessionsService {
     await this.sessionsRepository.deleteByToken(refreshToken);
   }
 
+  async deleteSessionById(sessionId: string) {
+    await this.sessionsRepository.deleteById(sessionId);
+  }
+
   async deleteAllSessionsForUser(userId: string) {
     await this.sessionsRepository.deleteAllForUser(userId);
   }

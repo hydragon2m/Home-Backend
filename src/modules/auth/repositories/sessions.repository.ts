@@ -28,6 +28,10 @@ export class SessionsRepository implements ISessionsRepository {
     await this.repository.delete({ refreshToken: token });
   }
 
+  async deleteById(id: string): Promise<void> {
+    await this.repository.delete({ id });
+  }
+
   async deleteAllForUser(userId: string): Promise<void> {
     await this.repository.delete({ user: { id: userId } });
   }

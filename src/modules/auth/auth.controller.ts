@@ -68,15 +68,21 @@ export class AuthController {
   async logout(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
+    @GetUser('sid') sid: string,
   ) {
+    if (sid) {
+      await this.authService.logoutBySessionId(sid);
+    }
+    
+    // Fallback: Xóa theo refresh token nếu sid không tồn tại vì lý do nào đó
     const refreshToken = req.cookies?.refresh_token;
-    if (refreshToken) {
+    if (refreshToken && !sid) {
       await this.authService.logout(refreshToken);
     }
     
     const baseOptions = this.getCookieOptions();
     res.clearCookie('access_token', baseOptions);
-    res.clearCookie('refresh_token', { ...baseOptions, path: '/auth/refresh' });
+    res.clearCookie('refresh_token', { ...baseOptions, path: '/auth' });
     
     return ServiceResult.success(null, 'Đăng xuất thành công');
   }
@@ -91,7 +97,7 @@ export class AuthController {
 
     res.cookie('refresh_token', refreshToken, {
       ...baseOptions,
-      path: '/auth/refresh', 
+      path: '/auth', 
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
   }

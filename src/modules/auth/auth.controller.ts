@@ -28,8 +28,8 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.login(loginDto, deviceInfo);
-    this.setCookies(res, result.data.access_token, result.data.refresh_token);
-    return result;
+    this.setCookies(res, result.accessToken, result.refreshToken);
+    return ServiceResult.success({ user: result.user }, 'Đăng nhập thành công');
   }
 
   @HttpCode(HttpStatus.OK)
@@ -42,9 +42,8 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.swapTokenToTenant(userId, orgId, deviceInfo);
-    this.setCookies(res, result.data.access_token, result.data.refresh_token);
-    
-    return result;
+    this.setCookies(res, result.accessToken, result.refreshToken);
+    return ServiceResult.success(result.data, 'Chuyển đổi Tổ chức thành công');
   }
 
   @HttpCode(HttpStatus.OK)
@@ -52,17 +51,15 @@ export class AuthController {
   async refreshTokens(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-    @Body('refreshToken') bodyRefreshToken?: string, // Fallback nếu không dùng cookie
     @Headers('user-agent') deviceInfo?: string,
   ) {
-    // Ưu tiên lấy từ cookie, nếu không có lấy từ body
-    const refreshToken = req.cookies?.refresh_token || bodyRefreshToken;
+    const refreshToken = req.cookies?.refresh_token;
     const oldAccessToken = req.cookies?.access_token;
     
     const result = await this.authService.refreshTokens(refreshToken, deviceInfo, oldAccessToken);
     
-    this.setCookies(res, result.data.access_token, result.data.refresh_token);
-    return result;
+    this.setCookies(res, result.accessToken, result.refreshToken);
+    return ServiceResult.success(null, 'Gia hạn Token thành công');
   }
 
   @HttpCode(HttpStatus.OK)
@@ -78,7 +75,7 @@ export class AuthController {
     }
     
     res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    res.clearCookie('refresh_token', { path: '/auth/refresh' });
     
     return ServiceResult.success(null, 'Đăng xuất thành công');
   }

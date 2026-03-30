@@ -42,10 +42,11 @@ export class AuthService {
 
     await this.sessionsService.createSession(user, refreshToken, deviceInfo);
 
-    return ServiceResult.success(
-      { access_token: accessToken, refresh_token: refreshToken, user: { id: user.id, email: user.email } },
-      'Đăng nhập thành công'
-    );
+    return {
+      accessToken,
+      refreshToken,
+      user: { id: user.id, email: user.email }
+    };
   }
 
   // 2. TENANT LOGIN (TOKEN SWAPPING): Chứa ngữ cảnh Tenant
@@ -66,10 +67,11 @@ export class AuthService {
 
     await this.sessionsService.createSession(user, refreshToken, deviceInfo);
 
-    return ServiceResult.success(
-      { access_token: accessToken, refresh_token: refreshToken, role: userOrg.role, orgId },
-      'Chuyển đổi Tổ chức thành công'
-    );
+    return {
+      accessToken,
+      refreshToken,
+      data: { role: userOrg.role, orgId }
+    };
   }
 
   async logout(refreshToken: string) {
@@ -97,9 +99,9 @@ export class AuthService {
     await this.sessionsService.deleteSession(refreshToken);
     await this.sessionsService.createSession(session.user, newRefreshToken, deviceInfo || session.deviceInfo);
 
-    return ServiceResult.success(
-      { access_token: newAccessToken, refresh_token: newRefreshToken },
-      'Gia hạn Token thành công'
-    );
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken
+    };
   }
 }

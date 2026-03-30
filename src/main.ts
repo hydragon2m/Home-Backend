@@ -33,7 +33,16 @@ async function bootstrap() {
     forbidNonWhitelisted: true, // Cấm gửi property vớ vẩn / sai cấu trúc
     transform: true, // Tự động cast kiểu dữ liệu
   }));
-  
+
+  // Anti-cache & Security Headers for Edge/CDN (Vercel/Cloudflare)
+  app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Vary', 'Cookie');
+    next();
+  });
+
   app.useGlobalInterceptors(new TransformInterceptor());
 
   await app.listen(port);

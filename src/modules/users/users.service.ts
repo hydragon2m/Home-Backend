@@ -2,6 +2,7 @@ import { Injectable, ConflictException, Inject, NotFoundException } from '@nestj
 import { User } from './entities/user.entity';
 import { type IUsersRepository, USERS_REPOSITORY } from './interfaces/users.repository.interface';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ServiceResult } from '../../common/utils/service-result';
 
 @Injectable()
 export class UsersService {
@@ -28,18 +29,17 @@ export class UsersService {
   async findById(id: string): Promise<User | null> {
     return this.usersRepository.findById(id);
   }
-
-  async getPublicProfile(id: string): Promise<Partial<User>> {
+  async getPublicProfile(id: string) {
     const user = await this.findById(id);
     if (!user) {
       throw new NotFoundException('Người dùng không tồn tại');
     }
-    // Chỉ trả về các thông tin an toàn (bỏ qua email, password, sđt)
     const { id: userId, name, avatar, bio, createdAt } = user;
-    return { id: userId, name, avatar, bio, createdAt };
+    const profile = { id: userId, name, avatar, bio, createdAt };
+    return ServiceResult.success(profile, 'Lấy thông tin người dùng thành công');
   }
 
-  async updateProfile(id: string, updateData: UpdateUserDto): Promise<Partial<User>> {
+  async updateProfile(id: string, updateData: UpdateUserDto) {
     const user = await this.findById(id);
     if (!user) {
       throw new NotFoundException('Người dùng không tồn tại');
@@ -50,6 +50,6 @@ export class UsersService {
     
     // Loại bỏ password trước khi trả về
     const { password, ...result } = updatedUser;
-    return result;
+    return ServiceResult.success(result, 'Cập nhật hồ sơ thành công');
   }
 }

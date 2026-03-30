@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { Organization } from './entities/organization.entity';
 import { UserOrganization } from './entities/user-organization.entity';
 import { ORGANIZATIONS_REPOSITORY, IOrganizationsRepository } from './interfaces/organizations.repository.interface';
+import { ServiceResult } from '../../common/utils/service-result';
 
 @Injectable()
 export class OrganizationsService {
@@ -11,15 +12,15 @@ export class OrganizationsService {
   ) {}
 
   async getUserOrganizations(userId: string) {
-    return this.orgRepository.findUserOrganizations(userId);
+    const orgs = await this.orgRepository.findUserOrganizations(userId);
+    return ServiceResult.success(orgs, 'Lấy danh sách Tổ chức thành công');
   }
 
   async verifyUserInOrg(userId: string, orgId: string): Promise<any> {
-    const org = await this.orgRepository.findById(orgId);
-    if (!org) {
-      throw new NotFoundException('Tổ chức không tồn tại');
+    const userOrg = await this.orgRepository.findUserOrganization(userId, orgId);
+    if (!userOrg) {
+      throw new NotFoundException('Người dùng không thuộc Tổ chức này hoặc Tổ chức không tồn tại');
     }
-    // Note: Ở đây có thêm logic check membership nếu cần
-    return org;
+    return userOrg;
   }
 }

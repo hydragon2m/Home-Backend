@@ -1,4 +1,5 @@
-import { Controller, Get, Patch, Body, UseGuards, Param } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Param, NotFoundException } from '@nestjs/common';
+import { ServiceResult } from '../../common/utils/service-result';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { GetUser } from '../../common/decorators/get-user.decorator';
@@ -12,11 +13,11 @@ export class UsersController {
   @Get('me')
   async getProfile(@GetUser('id') userId: string) {
     const user = await this.usersService.findById(userId);
-    if (user) {
-      const { password, ...result } = user;
-      return result;
+    if (!user) {
+      throw new NotFoundException('Người dùng không tồn tại');
     }
-    return null;
+    const { password, ...result } = user;
+    return ServiceResult.success(result, 'Lấy hồ sơ cá nhân thành công');
   }
 
   @Get(':id')

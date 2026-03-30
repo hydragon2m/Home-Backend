@@ -1,14 +1,19 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Res, Headers } from '@nestjs/common';
-import type { Response } from 'express';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Res, Headers, Req } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { GetUser } from '../../common/decorators/get-user.decorator';
+import { ServiceResult } from '../../common/utils/service-result';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
@@ -22,10 +27,9 @@ export class AuthController {
     @Headers('user-agent') deviceInfo: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { access_token, refresh_token, user } = await this.authService.login(loginDto, deviceInfo);
-
-    this.setCookies(res, access_token, refresh_token);
-    return { user, message: 'Đăng nhập thành công' };
+    const result = await this.authService.login(loginDto, deviceInfo);
+    this.setCookies(res, result.data.access_token, result.data.refresh_token);
+    return result;
   }
 
   @HttpCode(HttpStatus.OK)
@@ -37,50 +41,64 @@ export class AuthController {
     @Headers('user-agent') deviceInfo: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const newTokens = await this.authService.swapTokenToTenant(userId, orgId, deviceInfo);
-    this.setCookies(res, newTokens.access_token, newTokens.refresh_token);
+    const result = await this.authService.swapTokenToTenant(userId, orgId, deviceInfo);
+    this.setCookies(res, result.data.access_token, result.data.refresh_token);
     
-    return { role: newTokens.role, orgId: newTokens.orgId, message: 'Đăng nhập vào Tổ chức thành công' };
+    return result;
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
   async refreshTokens(
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
     @Body('refreshToken') bodyRefreshToken?: string, // Fallback nếu không dùng cookie
     @Headers('user-agent') deviceInfo?: string,
   ) {
     // Ưu tiên lấy từ cookie, nếu không có lấy từ body
-    const refreshToken = bodyRefreshToken; // Note: Ở đây có thể lấy từ cookie nếu cần
-    const newTokens = await this.authService.refreshTokens(refreshToken, deviceInfo);
+    const refreshToken = req.cookies?.refresh_token || bodyRefreshToken;
+    const oldAccessToken = req.cookies?.access_token;
     
-    this.setCookies(res, newTokens.access_token, newTokens.refresh_token);
-    return { message: 'Gia hạn token thành công' };
+    const result = await this.authService.refreshTokens(refreshToken, deviceInfo, oldAccessToken);
+    
+    this.setCookies(res, result.data.access_token, result.data.refresh_token);
+    return result;
   }
 
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  async logout(@Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies?.refresh_token;
+    if (refreshToken) {
+      await this.authService.logout(refreshToken);
+    }
+    
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
-    return { message: 'Đăng xuất thành công' };
+    
+    return ServiceResult.success(null, 'Đăng xuất thành công');
   }
 
   private setCookies(res: Response, accessToken: string, refreshToken: string) {
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    
     res.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction,
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000, 
+      maxAge: 15 * 60 * 1000, // 15 mins
     });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction,
       sameSite: 'lax',
       path: '/auth/refresh', 
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
   }
 }

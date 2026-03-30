@@ -10,6 +10,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { InvitationsService } from './invitations.service';
+import { OrganizationsService } from './organizations.service';
 import { OrgRole } from './entities/user-organization.entity';
 import { PoliciesGuard } from '../../common/guards/policies.guard';
 import { CheckPolicies } from '../../common/decorators/check-policies.decorator';
@@ -18,7 +19,15 @@ import { Action } from '../casl/casl-ability.factory';
 @Controller('organizations')
 @UseGuards(JwtAuthGuard)
 export class OrganizationsController {
-  constructor(private readonly invitationsService: InvitationsService) {}
+  constructor(
+    private readonly invitationsService: InvitationsService,
+    private readonly organizationsService: OrganizationsService,
+  ) {}
+
+  @Get('me')
+  async getMyOrganizations(@GetUser('id') userId: string) {
+    return this.organizationsService.getUserOrganizations(userId);
+  }
 
   @Post(':orgId/invites')
   @UseGuards(PoliciesGuard)

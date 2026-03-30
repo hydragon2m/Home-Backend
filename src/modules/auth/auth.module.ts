@@ -4,6 +4,8 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { TokenService } from './token.service';
+import { SessionsService } from './sessions.service';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -30,6 +32,8 @@ import { SESSIONS_REPOSITORY } from './interfaces/sessions.repository.interface'
   controllers: [AuthController],
   providers: [
     AuthService, 
+    TokenService,
+    SessionsService,
     JwtStrategy,
     {
       provide: SESSIONS_REPOSITORY,

@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Inject,
 } from '@nestjs/common';
+import { ServiceResult } from '../../common/utils/service-result';
 import { Invitation } from './entities/invitation.entity';
 import { OrgRole } from './entities/user-organization.entity';
 import { INVITATIONS_REPOSITORY, IInvitationsRepository } from './interfaces/invitations.repository.interface';
@@ -29,7 +30,7 @@ export class InvitationsService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
-    const invitation = {
+    const invitationDraft = {
       code,
       organizationId,
       invitedById,
@@ -37,7 +38,8 @@ export class InvitationsService {
       expiresAt,
     };
 
-    return this.invitationRepository.save(invitation);
+    const savedInvite = await this.invitationRepository.save(invitationDraft);
+    return ServiceResult.success(savedInvite, 'Tạo mã mời thành công');
   }
 
   async acceptInvite(userId: string, code: string) {
@@ -76,9 +78,9 @@ export class InvitationsService {
     }
     await this.invitationRepository.save(invitation);
 
-    return {
-      message: 'Tham gia tổ chức thành công',
-      organization: invitation.organization,
-    };
+    return ServiceResult.success(
+      { organization: invitation.organization },
+      'Tham gia tổ chức thành công'
+    );
   }
 }

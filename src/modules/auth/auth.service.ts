@@ -41,10 +41,11 @@ export class AuthService {
     const payload = { email: user.email, sub: user.id, sid: session.id };
     const accessToken = this.tokenService.generateAccessToken(payload);
 
+    const { password: _, ...userWithoutPassword } = user;
     return {
       accessToken,
       refreshToken,
-      user: { id: user.id, email: user.email }
+      user: userWithoutPassword
     };
   }
 

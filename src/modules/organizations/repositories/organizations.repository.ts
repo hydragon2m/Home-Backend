@@ -32,6 +32,13 @@ export class OrganizationsRepository implements IOrganizationsRepository {
     });
   }
 
+  async findOrganizationMembers(orgId: string): Promise<UserOrganization[]> {
+    return this.userOrgRepository.find({
+      where: { organization: { id: orgId } },
+      relations: ['user'],
+    });
+  }
+
   async save(org: Partial<Organization>): Promise<Organization> {
     return this.repository.save(org);
   }

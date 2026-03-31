@@ -23,6 +23,18 @@ export class OrganizationsService {
     }
     return userOrg;
   }
+
+  async getOrganizationById(userId: string, orgId: string) {
+    await this.verifyUserInOrg(userId, orgId);
+    const org = await this.orgRepository.findById(orgId);
+    return ServiceResult.success(org, 'Lấy thông tin Tổ chức thành công');
+  }
+
+  async getOrganizationMembers(userId: string, orgId: string) {
+    await this.verifyUserInOrg(userId, orgId);
+    const members = await this.orgRepository.findOrganizationMembers(orgId);
+    return ServiceResult.success(members, 'Lấy danh sách thành viên thành công');
+  }
   
   async create(userId: string, name: string) {
     const org = await this.orgRepository.save({ name });

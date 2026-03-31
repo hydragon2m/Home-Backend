@@ -29,6 +29,16 @@ export class OrganizationsController {
     return this.organizationsService.getUserOrganizations(userId);
   }
 
+  @Get(':orgId')
+  async getById(@GetUser('id') userId: string, @Param('orgId') orgId: string) {
+    return this.organizationsService.getOrganizationById(userId, orgId);
+  }
+
+  @Get(':orgId/members')
+  async getMembers(@GetUser('id') userId: string, @Param('orgId') orgId: string) {
+    return this.organizationsService.getOrganizationMembers(userId, orgId);
+  }
+
   @Post()
   async create(@GetUser('id') userId: string, @Body('name') name: string) {
     return this.organizationsService.create(userId, name);

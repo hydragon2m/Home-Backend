@@ -54,9 +54,8 @@ export class AuthController {
     @Headers('user-agent') deviceInfo?: string,
   ) {
     const refreshToken = req.cookies?.refresh_token;
-    const oldAccessToken = req.cookies?.access_token;
     
-    const result = await this.authService.refreshTokens(refreshToken, deviceInfo, oldAccessToken);
+    const result = await this.authService.refreshTokens(refreshToken, deviceInfo);
     
     this.setCookies(res, result.accessToken, result.refreshToken);
     return ServiceResult.success(null, 'Gia hạn Token thành công');

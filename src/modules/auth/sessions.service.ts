@@ -11,16 +11,18 @@ export class SessionsService {
     private readonly tokenService: TokenService,
   ) {}
 
-  async createSession(user: User, refreshToken: string, deviceInfo?: string) {
+  async createSession(user: User, refreshToken: string, deviceInfo?: string, orgId?: string, role?: string) {
     const days = this.tokenService.getRefreshTokenExpiresInDays();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + days);
-
+ 
     return this.sessionsRepository.create({
       user,
       refreshToken,
       expiresAt,
       deviceInfo,
+      orgId,
+      role,
     });
   }
 

@@ -56,8 +56,8 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('Người dùng không tồn tại');
 
     const refreshToken = this.tokenService.generateRefreshToken();
-    const session = await this.sessionsService.createSession(user, refreshToken, deviceInfo);
-
+    const session = await this.sessionsService.createSession(user, refreshToken, deviceInfo, orgId, userOrg.role);
+ 
     const payload = { 
       email: user.email, 
       sub: user.id, 
@@ -85,27 +85,29 @@ export class AuthService {
     return ServiceResult.success(null, 'Đăng xuất thành công');
   }
 
-  async refreshTokens(refreshToken: string, deviceInfo?: string, oldAccessToken?: string) {
+  async refreshTokens(refreshToken: string, deviceInfo?: string) {
     const session = await this.sessionsService.validateSession(refreshToken);
-
-    // Phục hồi ngữ cảnh Tenant từ Access Token cũ (nếu có)
-    let orgId = undefined, role = undefined;
-    if (oldAccessToken) {
-      const decoded: any = this.tokenService.decodeToken(oldAccessToken);
-      if (decoded) {
-        orgId = decoded.orgId;
-        role = decoded.role;
-      }
-    }
-
+ 
     const newRefreshToken = this.tokenService.generateRefreshToken();
-
+ 
     await this.sessionsService.deleteSession(refreshToken);
-    const newSession = await this.sessionsService.createSession(session.user, newRefreshToken, deviceInfo || session.deviceInfo);
-
-    const payload = { email: session.user.email, sub: session.user.id, orgId, role, sid: newSession.id };
+    const newSession = await this.sessionsService.createSession(
+      session.user, 
+      newRefreshToken, 
+      deviceInfo || session.deviceInfo,
+      session.orgId,
+      session.role
+    );
+ 
+    const payload = { 
+      email: session.user.email, 
+      sub: session.user.id, 
+      orgId: session.orgId, 
+      role: session.role, 
+      sid: newSession.id 
+    };
     const newAccessToken = this.tokenService.generateAccessToken(payload);
-
+ 
     return {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken

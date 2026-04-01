@@ -18,6 +18,12 @@ export class Session {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
+  @Column({ nullable: true })
+  orgId: string;
+  
+  @Column({ nullable: true })
+  role: string;
+
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;

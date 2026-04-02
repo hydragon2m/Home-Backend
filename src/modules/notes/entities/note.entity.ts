@@ -13,6 +13,12 @@ export class Note {
   @Column({ type: 'text', nullable: true })
   content: string;
 
+  @Column({ nullable: true })
+  icon: string;
+
+  @Column({ nullable: true })
+  cover: string;
+
   @Column({ name: 'is_folder', default: false })
   isFolder: boolean;
 

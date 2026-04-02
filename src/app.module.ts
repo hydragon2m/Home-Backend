@@ -12,6 +12,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { TerminusModule } from '@nestjs/terminus';
 import { HealthController } from './modules/health/health.controller';
 import { validate } from './config/env.validation';
+import { NotesModule } from './modules/notes/notes.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { validate } from './config/env.validation';
     AuthModule,
     CaslModule,
     EventsModule,
+    NotesModule,
     TerminusModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,

@@ -2,8 +2,10 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@n
 import { NotesService } from './notes.service';
 import { Note } from './entities/note.entity';
 import { GetUser } from '../../common/decorators/get-user.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @Controller('organizations/:orgId/notes')
+@UseGuards(JwtAuthGuard)
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
